@@ -1,4 +1,4 @@
-# robot_pressure_ft
+# Visual Force Torque Sensing
 
 ## Setup
 ### Force-Torque Sensor

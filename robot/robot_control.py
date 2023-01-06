@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-import time
-import math
 import stretch_body.robot
 import zmq_client
 import zmq_server

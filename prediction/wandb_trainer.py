@@ -1,10 +1,8 @@
 import torch
 from torch.utils.data import DataLoader, RandomSampler
-import argparse
 from prediction.model import Model
-# from prediction.model_efforts_small import Model
-# from prediction.model_efforts_medium import Model
-# from prediction.model_gripper import Model
+# from prediction.model_effort_baseline import Model
+# from prediction.model_robot_state import Model
 # from prediction.model_vit import Model
 from recording.loader import FTData
 import os
@@ -15,7 +13,6 @@ from torch.utils.tensorboard import SummaryWriter
 from prediction.data_utils import compute_loss_ratio
 import wandb
 
-
 def train_epoch(model, optimizer, train_loader, loss_ratio):
     model.train()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -25,13 +22,8 @@ def train_epoch(model, optimizer, train_loader, loss_ratio):
     print('loader subset size: ', len(train_loader))
 
     for (img, targets, robot_states) in tqdm(train_loader):
-        img = torch.zeros(img.shape) # TODO: Remove this when done with mlp
-        # test = img[0].permute(1, 2, 0)
-        # cv2.imshow('img', np.array(test))
-        # cv2.waitKey(0)
         img = img.to(device)
         targets = targets.to(device)
-        # targets = targets * 0.1 # TODO: remove this once the training data is rescaled
         robot_states = robot_states.to(device)
         model = model.to(device)
         optimizer.zero_grad()
@@ -46,9 +38,8 @@ def train_epoch(model, optimizer, train_loader, loss_ratio):
         f_mse = torch.nn.functional.mse_loss(f_outputs, f_targets)
         t_mse = torch.nn.functional.mse_loss(t_outputs, t_targets)
 
-        # weighting the loss by the relative mean magnitudes of the forces and torques
+        # weighting the loss by the relative std of the forces and torques
         train_loss = f_mse + loss_ratio * t_mse
-        # print('train loss: ', train_loss)
         train_loss.backward()
         optimizer.step()
         
@@ -58,7 +49,6 @@ def train_epoch(model, optimizer, train_loader, loss_ratio):
     avg_f_mse = running_f_mse / len(train_loader)
     avg_t_mse = running_t_mse / len(train_loader)
 
-    # return f_mse, t_mse
     return avg_f_mse, avg_t_mse
 
 def val_epoch(model, test_loader):
@@ -68,10 +58,8 @@ def val_epoch(model, test_loader):
     running_t_mse = 0
     with torch.no_grad():
         for (img, targets, robot_states) in tqdm(test_loader):
-            img = torch.zeros(img.shape) # TODO: Remove this when done with mlp
             img = img.to(device)
             targets = targets.to(device)
-            # targets = targets * 0.1 # TODO: remove this once the training data is rescaled
             robot_states = robot_states.to(device)
             model = model.to(device)
             outputs = model(img, robot_states)
@@ -91,12 +79,10 @@ def val_epoch(model, test_loader):
     avg_f_mse = running_f_mse / len(test_loader)
     avg_t_mse = running_t_mse / len(test_loader)
 
-    # return f_mse, t_mse
     return avg_f_mse, avg_t_mse
 
 def main():
     config, args = parse_config_args()
-    # with wandb.init(config=wandb.config, project='rp_ft_8_20'):
     with wandb.init(config=wandb.config):
 
         # overwriting yaml  
@@ -105,7 +91,7 @@ def main():
         config.LEARNING_RATE = wandb.config.learning_rate
         config.MOMENTUM = wandb.config.momentum
         config.WEIGHT_DECAY = wandb.config.weight_decay
-        # config.DROPOUT = wandb.config.dropout
+        config.DROPOUT = wandb.config.dropout
 
         model = Model(gradcam=args.enable_gradcam)
         if wandb.config.optimizer == 'sgd':
@@ -124,12 +110,6 @@ def main():
         # loss_ratio = compute_loss_ratio(training_set)
         loss_ratio = config.LOSS_RATIO
         print("Loss ratio: ", loss_ratio)
-
-        # # sampler picks a subset of the training set for each epoch
-        # train_sampler = RandomSampler(training_set, replacement=True, num_samples=len(training_set) // 4)
-
-        # train_loader = DataLoader(training_set, batch_size=config.BATCH_SIZE, shuffle=True, num_workers=config.NUM_WORKERS, sampler=train_sampler) # , prefetch_factor=512, pin_memory=True, persistent_workers=True)
-        # test_loader = DataLoader(testing_set, batch_size=config.BATCH_SIZE, shuffle=True, num_workers=config.NUM_WORKERS) # , prefetch_factor=512, pin_memory=True, persistent_workers=True)
 
         # number of files in ./checkpoints that contain args.config
         folder_index = len([f for f in os.listdir(config.MODEL_DIR) if f.startswith(args.config)])
@@ -188,13 +168,13 @@ def main():
             torch.save(model.state_dict(), model_path)
             print('Model saved to {}'.format(model_path))
 
-            # saving losses to a file
+            # saving losses to a txt file
             with open(os.path.join('logs/checkpoint_history', args.config + '_' + str(folder_index), '{}_log_{}.txt'.format(args.config, 'raw')), 'a') as f:
                 log = model_name + ': Epoch {}/{}: Training loss = {}, Validation loss = {}\n'.format(epoch+1, config.NUM_EPOCHS, train_loss, val_loss)
                 loss_history.append((val_loss, model_name))
                 f.write(log)
 
-        # saving losses to log files
+        # saving losses to a txt file
         loss_history.sort(key=lambda x: x[0])
         with open(os.path.join('logs/checkpoint_history', args.config + '_' + str(folder_index), '{}_log_{}.txt'.format(args.config, 'sorted')), 'a') as f:
             f.write('\n\nBest model: {}\n'.format(loss_history[0][1]))
@@ -216,25 +196,21 @@ if __name__ == "__main__":
     parameters_dict = {
         'optimizer': {
             'values': ['adam'],
+            # 'values': ['sgd']
         },
         'batch_size': {
             'values': [1]
         },
         'learning_rate': {
-            'values': [1e-5]
-            # 'values': [config.LEARNING_RATE]
+            'values': [config.LEARNING_RATE]
         },
         'momentum': {
             'values': [0.99]
         },
-
         'weight_decay': {
-            'values': [0]
-            # 'values': [0.0]
+            'values': [0.0]
         },
         'dropout': {
-            # 'values': [0.0, 0.25, 0.5, 0.75]
-            # 'values': [0.0]
             'values': [config.DROPOUT]
         },
         'thawed_layers': {
@@ -242,7 +218,6 @@ if __name__ == "__main__":
         }
     }
     sweep_config['parameters'] = parameters_dict
-    sweep_id = wandb.sweep(sweep_config, project='robot_state_mlp')
+    sweep_id = wandb.sweep(sweep_config, project='visual_force_torque')
 
-    # wandb.agent(sweep_id, main, count=20) 
     wandb.agent(sweep_id, main) 

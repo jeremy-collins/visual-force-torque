@@ -1,17 +1,11 @@
-from multiprocessing import synchronize
 import re
 import cv2
 import sys
 import numpy as np
 import time
-from datetime import datetime
 import os
 from recording.gripper_camera import Camera
 from recording.ft_stretch_v1 import FTCapture
-# from recording.move_gripper import Gripper
-import argparse
-import threading
-# import keyboard
 import robot.zmq_server as zmq_server
 import robot.zmq_client as zmq_client
 from robot.robot_utils import *
@@ -78,10 +72,6 @@ class DataCapture:
         ft_name = '{:.3f}'.format(self.ft.current_frame_time).replace('.', '_')
         state_name = '{:.3f}'.format(self.ft.current_frame_time).replace('.', '_') + '.txt'
 
-        # image_name = str(self.feed.current_frame_time) + '.jpg'
-        # ft_name = str(self.ft.current_frame_time)
-        # state_name = str(self.ft.current_frame_time) + '.txt'
-
         # save data to machine
         if self.args.stage in ['train', 'test', 'raw']:
             cv2.imwrite(os.path.join(self.image_folder, image_name), frame)
@@ -103,11 +93,6 @@ class DataCapture:
             disp_time = str(round(self.feed.current_frame_time - self.feed.first_frame_time, 3))
             cv2.putText(frame, disp_time, (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3, cv2.LINE_AA)
             cv2.imshow("frames", frame)
-            # gt = np.array(ft_data)
-            # force_gt = gt[0:3]
-            # torque_gt = gt[3:6]
-            # fig = self.plotter.visualize_ft(force_gt=force_gt, torque_gt=torque_gt, force_pred=np.zeros((3,)), torque_pred=np.zeros((3,)), frame=frame, collision_flag=False, view_3D=False)
-            # cv2.imshow('live view', fig)
 
             if self.args.robot_state:
                 # need to access robot state to control with keyboard
@@ -161,7 +146,6 @@ if __name__ == "__main__":
     cap = DataCapture()
     delay = []
 
-    # for i in range(4500):
     while not cap.stop:
         data = cap.capture_data()
         delay.append(data['ft_frame_time'] - data['frame_time'])

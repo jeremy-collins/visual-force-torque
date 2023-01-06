@@ -12,8 +12,7 @@ dependencies:
   - torchaudio
   - numpy
   - matplotlib
-  # - cudatoolkit=11.3 # thanos
-  - cudatoolkit=11.4 # chappie
+  - cudatoolkit=11.4
   - pyzmq
 
 prefix: /media/jer/virtual_envs/miniconda3/envs/rp_ft

@@ -1,8 +1,6 @@
 import cv2
 import numpy as np
 import open3d as o3d
-import copy
-import matplotlib.pyplot as plt
 from prediction.config_utils import *
 import trimesh
 
@@ -28,16 +26,14 @@ class Plotter():
         self.torque_center_left = (self.torque_top_left[0], int(np.mean((self.torque_top_left[1], self.torque_bottom_right[1])))) # xy
         self.torque_center_top = (int(np.mean((self.torque_top_left[0], self.torque_bottom_right[0]))), self.torque_top_left[1]) # xy
 
-        # self.side_view_img = cv2.imread('./assets/stretch_gripper_side_view.png')
-        self.side_view_img = cv2.imread('./assets/o3d_frame.png')
-        self.side_view_img = self.side_view_img[50:-100, 100:-250, :]
-        ar = self.side_view_img.shape[0] / self.side_view_img.shape[1]
-        self.side_view_img = cv2.resize(self.side_view_img, (frame.shape[1]* 2, int(frame.shape[1] * 2 * ar)))
-        self.side_view_top_left = (self.frame_top_left[0], self.frame_bottom_right[1]) # xy, this is the bottom left corner of the frame
-        self.side_view_bottom_right = (self.side_view_top_left[0] + self.side_view_img.shape[1], self.side_view_top_left[1] + self.side_view_img.shape[0]) # xy, this is the top right corner of the frame
+        self.o3d_frame = cv2.imread('./assets/o3d_frame.png')
+        self.o3d_frame = self.o3d_frame[50:-100, 100:-250, :]
+        ar = self.o3d_frame.shape[0] / self.o3d_frame.shape[1]
+        self.o3d_frame = cv2.resize(self.o3d_frame, (frame.shape[1]* 2, int(frame.shape[1] * 2 * ar)))
+        self.o3d_frame_top_left = (self.frame_top_left[0], self.frame_bottom_right[1]) # xy, this is the bottom left corner of the frame
+        self.o3d_frame_bottom_right = (self.o3d_frame_top_left[0] + self.o3d_frame.shape[1], self.o3d_frame_top_left[1] + self.o3d_frame.shape[0]) # xy, this is the top right corner of the frame
 
-        # self.fig_size = (frame.shape[1] + 2*self.graph_size[0] + 4*self.fig_border, frame.shape[0] + 2*self.fig_border) # xy
-        self.fig_size = (frame.shape[1] + 2*self.graph_size[0] + 4*self.fig_border, frame.shape[0] + self.side_view_img.shape[0] + 2*self.fig_border) # xy
+        self.fig_size = (frame.shape[1] + 2*self.graph_size[0] + 4*self.fig_border, frame.shape[0] + self.o3d_frame.shape[0] + 2*self.fig_border) # xy
 
         self.tick_length = 10
         self.num_v_ticks_force = 7
@@ -60,23 +56,19 @@ class Plotter():
         else:
             self.gripper_mesh = o3d.io.read_triangle_mesh("./assets/stretch_dex_gripper_assembly_cutout.STL")
             self.gripper_rot = self.gripper_mesh.get_rotation_matrix_from_xyz((np.pi * 45 / 180, np.pi * 45 / 180, 0))
-            # self.gripper_rot = self.gripper_mesh.get_rotation_matrix_from_xyz((np.pi * 0 / 180, np.pi * 0 / 180, 0))
             self.gripper_mesh.rotate(self.gripper_rot, center=(0, 0, 0))
 
         self.gripper_mesh.compute_vertex_normals()
-        # self.gripper_mesh.paint_uniform_color([0.5,0.5,0.5])
 
         # 3d visualization
         self.o3d_vis = o3d.visualization.Visualizer()
         self.o3d_vis.create_window()
-
 
     def indicate_collision(self):
             cv2.putText(self.fig, 'COLLISION', (int(np.mean((self.frame_top_left[0], self.frame_bottom_right[0])) - 75), int(np.mean((self.frame_top_left[1], self.frame_bottom_right[1])) + 10)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3, cv2.LINE_AA)
 
     def plot_arrow(self, force_pred, force_gt):
         arrow_scale = 10
-
         arrow_origin = (self.frame_center[0], self.frame_center[1] + 50)
         arrow_vector = (-int(force_pred[1] * arrow_scale), int(force_pred[0] * arrow_scale))
         arrow_vector_gt = (-int(force_gt[1] * arrow_scale), int(force_gt[0] * arrow_scale))
@@ -87,12 +79,6 @@ class Plotter():
         # pred
         cv2.arrowedLine(self.fig, arrow_origin, (arrow_origin[0] + arrow_vector[0], arrow_origin[1] + arrow_vector[1]), (255, 182, 109), 2, line_type=cv2.MARKER_TRIANGLE_UP, tipLength=0.15)
 
-        # side_arrow_origin = (self.side_view_top_left[0] + int(self.side_view_img.shape[1] * 0.64), self.side_view_top_left[1] + int(self.side_view_img.shape[0] * 0.53))
-        # side_arrow_vector = (int(force_pred[2] * arrow_scale), int(force_pred[0] * arrow_scale))
-        # side_arrow_vector_gt = (int(force_gt[2] * arrow_scale), int(force_gt[0] * arrow_scale))
-        # cv2.arrowedLine(self.fig, side_arrow_origin, (side_arrow_origin[0] + side_arrow_vector_gt[0], side_arrow_origin[1] + side_arrow_vector_gt[1]), (36, 255, 36), 2, line_type=cv2.MARKER_TRIANGLE_UP, tipLength=0.15)
-        # cv2.arrowedLine(self.fig, side_arrow_origin, (side_arrow_origin[0] + side_arrow_vector[0], side_arrow_origin[1] + side_arrow_vector[1]), (255, 182, 109), 2, line_type=cv2.MARKER_TRIANGLE_UP, tipLength=0.15)
-
     def visualize_ft(self, force_gt, torque_gt, force_pred, torque_pred, frame, collision_flag, view_3D=True):
         if self.args.stage == 'train':
             force_pred = np.array([0, 0, 0])
@@ -100,21 +86,18 @@ class Plotter():
 
         self.collision_flag = collision_flag # for collision demo
 
-        self.side_view_img = cv2.imread('./assets/o3d_frame.png')
-        self.side_view_img = self.side_view_img[50:-100, 100:-250, :]
-        ar = self.side_view_img.shape[0] / self.side_view_img.shape[1]
-        # self.side_view_img = cv2.resize(self.side_view_img, (frame.shape[1] * 2, int(frame.shape[1] * 2 * ar)))
-        self.side_view_img = cv2.resize(self.side_view_img, (frame.shape[1] * 2, int(frame.shape[1] * 2 * ar)))
+        self.o3d_frame = cv2.imread('./assets/o3d_frame.png')
+        self.o3d_frame = self.o3d_frame[50:-100, 100:-250, :]
+        ar = self.o3d_frame.shape[0] / self.o3d_frame.shape[1]
+        self.o3d_frame = cv2.resize(self.o3d_frame, (frame.shape[1] * 2, int(frame.shape[1] * 2 * ar)))
         self.axes_img = cv2.imread('./assets/axes_3d.png')
         self.axes_img = cv2.resize(self.axes_img, (250, 250))
 
-    
         self.fig = np.ones((self.fig_size[1], self.fig_size[0], 3), dtype=np.uint8)*255
         self.fig[self.frame_top_left[1]:self.frame_bottom_right[1], self.frame_top_left[0]:self.frame_bottom_right[0], :] = frame
-        self.fig[self.side_view_top_left[1]:self.side_view_bottom_right[1], self.side_view_top_left[0]:self.side_view_bottom_right[0], :] = self.side_view_img
+        self.fig[self.o3d_frame_top_left[1]:self.o3d_frame_bottom_right[1], self.o3d_frame_top_left[0]:self.o3d_frame_bottom_right[0], :] = self.o3d_frame
 
-        self.fig[self.side_view_top_left[1] + self.fig_border:self.side_view_top_left[1] + self.axes_img.shape[1] + self.fig_border, self.side_view_bottom_right[0] - self.fig_border:self.side_view_bottom_right[0] + self.axes_img.shape[0] - self.fig_border, :] = self.axes_img
-
+        self.fig[self.o3d_frame_top_left[1] + self.fig_border:self.o3d_frame_top_left[1] + self.axes_img.shape[1] + self.fig_border, self.o3d_frame_bottom_right[0] - self.fig_border:self.o3d_frame_bottom_right[0] + self.axes_img.shape[0] - self.fig_border, :] = self.axes_img
 
         # FORCES
         cv2.rectangle(self.fig, self.force_top_left, self.force_bottom_right, (0, 0, 0), thickness=1)
@@ -179,8 +162,6 @@ class Plotter():
         if view_3D:
             self.render_3d_view(force_gt, torque_gt, force_pred, torque_pred)
 
-        # self.plot_arrow(force_pred, force_gt)
-
         return self.fig
 
     def render_3d_view(self, force_gt, torque_gt, force_pred, torque_pred):
@@ -201,17 +182,13 @@ class Plotter():
         norm_gt_color = np.array([0.0, 0.4, 0.6])
         norm_pred_color = np.array([0.5, 0.85, 1.0])
 
+        # force arrows
         if np.linalg.norm(force_gt) > 0:
             self.plot_3d_force_arrow(coords=force_gt, color=norm_gt_color, translation=force_trans)
         if np.linalg.norm(force_pred) > 0:
             self.plot_3d_force_arrow(coords=force_pred, color=norm_pred_color, translation=force_trans)
-        # if np.linalg.norm(torque_gt) > 0:
-        #     # self.plot_3d_force_arrow(coords=torque_gt, color=[1, 0, 0], translation=force_trans)
-        #     self.plot_3d_torque_arrow(coords=torque_gt, color=norm_gt_color, translation=torque_trans, rot=(0, 0, 0))
-        # if np.linalg.norm(torque_pred) > 0:
-        #     self.plot_3d_torque_arrow(coords=torque_pred, color=norm_pred_color, translation=torque_trans, rot=(0, 0, 0))
-
-        # correct torque arrows
+ 
+        # torque arrows
         cube_len = 0.8
         self.plot_3d_torque_arrow(-torque_pred[0], color=[1, 0.5, 0.5], translation=torque_trans + [0, -cube_len, 0], rot=(0, 0, 0))  # predicted x
         self.plot_3d_torque_arrow(-torque_gt[0], color=[0.8, 0, 0], translation=torque_trans + [0.001, -cube_len - 0.001, 0.001], rot=(0, 0, 0))  # gt x
@@ -220,31 +197,13 @@ class Plotter():
         self.plot_3d_torque_arrow(-torque_pred[2], color=[0.5, 0.5, 1], translation=torque_trans + [cube_len, 0, 0], rot=(0, 0, np.pi/2))   # predicted z
         self.plot_3d_torque_arrow(-torque_gt[2], color=[0.2, 0.2, 1.0], translation=torque_trans + [cube_len + 0.001, 0.001, 0.001], rot=(0, 0, np.pi/2))   # gt z
 
-        # triad_mesh = o3d.geometry.TriangleMesh.create_coordinate_frame()
-        # R = triad_mesh.get_rotation_matrix_from_xyz((+np.pi/2, np.pi/2, 0))
-        # triad_mesh.rotate(R, center=(0, 0, 0))
-        # triad_mesh.rotate(self.gripper_rot, center=(0, 0, 0))
-        # triad_mesh.translate(self.gripper_rot @ torque_trans)
-        # self.o3d_vis.add_geometry(triad_mesh)
-
-
         self.plot_gripper_mesh(rotate_frame=False)
-
-        # cv2.putText(self.fig, 'x', (self.side_view_bottom_right[0] + 20, self.side_view_top_left[1] + 330), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1, cv2.LINE_AA)
-        # cv2.putText(self.fig, 'y', (self.side_view_bottom_right[0] - 85, self.side_view_top_left[1] + 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1, cv2.LINE_AA)
-        # cv2.putText(self.fig, 'z', (self.side_view_bottom_right[0] + 125, self.side_view_top_left[1] + 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1, cv2.LINE_AA)
-
-        # opt = self.o3d_vis.get_render_option()
-        # opt.light_on = True
 
         self.o3d_set_camera_extrinsic(self.o3d_vis)
 
-        # while True:
         self.o3d_vis.poll_events()
         self.o3d_vis.update_renderer()
-
         self.o3d_vis.capture_screen_image('./assets/o3d_frame.png')
-
         self.o3d_vis.clear_geometries()
 
     def o3d_set_camera_extrinsic(self, vis, transform=None):
@@ -288,6 +247,7 @@ class Plotter():
 
         u = np.array([0, 0, 1])
         v = coords / np.linalg.norm(coords)
+
         # finding quaternion from u to v
         q = (1 + np.dot(u, v), np.cross(u, v)[0], np.cross(u, v)[1], np.cross(u, v)[2])
         q = q / np.linalg.norm(q)
@@ -304,7 +264,6 @@ class Plotter():
         self.force_arrow_mesh.rotate(self.gripper_rot, center=(0, 0, 0))
         self.force_arrow_mesh.translate(self.gripper_rot @ translation) # rotating translation vector with gripper
         self.o3d_vis.add_geometry(self.force_arrow_mesh)
-
 
     def plot_3d_torque_arrow(self, mag, color, translation, rot):
         ARROW_LENGTH_SCALE = 180 * 1.5
@@ -325,7 +284,6 @@ class Plotter():
         
         self.o3d_vis.add_geometry(self.torque_arrow_mesh)
 
-
     def get_arrow_cut_angle(self, target_angle=45):
         flip = False
         if target_angle < 0:
@@ -341,9 +299,7 @@ class Plotter():
             cut_normal = np.array([np.sin(target_angle_rad), 0, -np.cos(target_angle_rad)])
 
             tmesh = trimesh.Trimesh(vertices=np.asarray(mesh.vertices), faces=np.asarray(mesh.triangles))
-            # tmesh.show()
             tmesh = tmesh.slice_plane(cut_point, cut_normal, cap=True)
-            # tmesh.show()
 
             mesh.vertices = o3d.utility.Vector3dVector(tmesh.vertices)
             mesh.triangles = o3d.utility.Vector3iVector(tmesh.faces)
@@ -353,6 +309,7 @@ class Plotter():
         verts = np.asarray(mesh.vertices)
         ang = np.arctan2(verts[:, 2], verts[:, 0])
         ang = (ang + 2 * np.pi) % (2 * np.pi)
+
         #rotate forwards
         rotate_amount = -ang.max()
 
@@ -363,16 +320,6 @@ class Plotter():
         rotmat[2, 2] = np.cos(rotate_amount)
 
         new_verts = np.matmul(verts, rotmat)
-
-        # fig = plt.figure(figsize=(12, 12))
-        # ax = fig.add_subplot(projection='3d')
-        # ax.scatter(new_verts[:, 0], new_verts[:, 1], new_verts[:, 2])
-        # # ax.scatter(verts[:, 0], verts[:, 1], verts[:, 2])
-        # ax.set_xlabel('X-axis')
-        # ax.set_ylabel('Y-axis')
-        # ax.set_zlabel('Z-axis')
-        # plt.show()
-
         mesh.vertices = o3d.utility.Vector3dVector(new_verts)
 
         if flip:
@@ -380,9 +327,7 @@ class Plotter():
             mesh.rotate(R, center=(0, 0, 0))
 
         mesh.compute_vertex_normals()
-        # o3d.visualization.draw_geometries([mesh])
         return mesh
-
 
     def get_arrow_angle(self, target_angle=45):
         mesh = o3d.io.read_triangle_mesh("./assets/torque_arrow.STL")
@@ -414,28 +359,9 @@ class Plotter():
         rotmat[2, 2] = np.cos(ROTATE_BACK_RADIANS)
 
         new_verts = np.matmul(new_verts, rotmat)
-
-        # fig = plt.figure(figsize=(12, 12))
-        # ax = fig.add_subplot(projection='3d')
-        # ax.scatter(new_verts[:, 0], new_verts[:, 1], new_verts[:, 2])
-        # # ax.scatter(verts[:, 0], verts[:, 1], verts[:, 2])
-        # ax.set_xlabel('X-axis')
-        # ax.set_ylabel('Y-axis')
-        # ax.set_zlabel('Z-axis')
-        # plt.show()
-
         mesh.vertices = o3d.utility.Vector3dVector(new_verts)
         mesh.compute_vertex_normals()
         return mesh
-
-        # o3d.visualization.draw_geometries([self.torque_arrow_mesh])
-
-        # self.o3d_vis.add_geometry(self.torque_arrow_mesh)
-
-    def generate_arrow_patrick(self, length):
-        START_POS = np.array([1, 0, 0])
-        RADIUS = 1
-
     
     def plot_axes(self, translation):
         mag = 10
@@ -466,10 +392,6 @@ if __name__ == '__main__':
     zero_vec = np.array([0, 0, 0])
     frame = np.zeros((320, 480, 3), dtype=np.uint8)
 
-
-    # plotter.plot_3d_torque_arrow_patrick(force_vec, norm_gt_color, np.array([0, 0, 0]))
-
     img = plotter.visualize_ft(force_vec, torque_vec, force_vec_2, torque_vec_2, frame, collision_flag=False)
     cv2.imshow('plot', img)
     cv2.waitKey(0)
-

@@ -4,19 +4,8 @@ import json
 import threading
 import time
 
-# IP_DESKTOP = '192.168.0.100' # thanos + ethernet
-# IP_DESKTOP = '100.70.6.111' # thanos + gtother
-# IP_DESKTOP = '192.168.0.101' # thanos + HRL-router
-IP_DESKTOP = '100.70.9.12' # chappie + gtother
-# IP_DESKTOP = '100.70.6.112' # midnight stretch + gtother
-# IP_DESKTOP = '192.168.0.104' # midnight stretch + HRL-router
-# IP_DESKTOP = '127.0.0.1' # local
-
-# IP_ROBOT = '192.168.0.101' # reggie + ethernet
-# IP_ROBOT = '100.70.6.215' # reggie + gtother
-IP_ROBOT = '100.70.4.105' # midnight stretch + gtother
-# IP_ROBOT = '192.168.0.104' # midnight stretch + HRL-router
-# IP_ROBOT = '127.0.0.1' # local
+IP_DESKTOP = '127.0.0.1' # TODO: Change this to the IP address of the desktop
+IP_ROBOT = '127.0.0.1' # TODO: Change this to the IP address of the robot
 
 PORT_COMMAND_SERVER = 5556
 PORT_STATUS_SERVER = 5557

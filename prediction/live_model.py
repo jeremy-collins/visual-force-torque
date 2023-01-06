@@ -1,26 +1,18 @@
 import torch
 import numpy as np
 import cv2
-import argparse
 import os
 import time
 from prediction.model import Model
-# from prediction.model_gripper import Model
-# from prediction.model_efforts_small import Model
-# from prediction.model_efforts_medium import Model
+# from prediction.model_robot_state import Model
+# from prediction.model_effort_baseline import Model
 # from prediction.model_vit import Model
 from recording.gripper_camera import Camera
 from recording.ft_stretch_v1 import FTCapture
-from recording.move_gripper import Gripper
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.animation as animation
 from prediction.transforms import *
 from prediction.config_utils import *
 from prediction.data_utils import *
 from prediction.pred_utils import *
-# import keyboard
 import robot.zmq_server as zmq_server
 import robot.zmq_client as zmq_client
 from robot.robot_utils import *
@@ -63,7 +55,6 @@ class LiveModel():
             self.frame = self.feed.get_frame()
             self.ft = FTCapture(delay=self.args.delay)
             self.video_fps = 5
-            # self.video_fps = 2.5
             
         elif self.args.folder is not None:
             self.img_list, self.ft_list, self.grip_list = get_data_lists(self.args.folder)
@@ -109,16 +100,10 @@ class LiveModel():
         # print(os.path.join(self.img_list[self.frame_count][1]))
         img_frame = cv2.imread(os.path.join(self.img_list[self.frame_count][1]))
         ft_frame = np.load(os.path.join(self.ft_list[self.frame_count][1]))
-        ft_frame = ft_frame # / self.config.SCALE_FT
-
+        # ft_frame = ft_frame / self.config.SCALE_FT
 
         with open(os.path.join(self.grip_list[self.frame_count][1]), 'r') as f:
             robot_state = json.load(f)
-        
-
-        # if robot_state is None or 'gripper' not in robot_state:
-        #     # setting all values to 0 if no robot state is available
-        #     robot_state = {'gripper': 0, 'lift_effort': 0, 'pitch_effort': 0, 'z': 0}
 
         if robot_state is None:
             robot_state = {'gripper': 0.0, 'z': 0.0, 'y': 0.0, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0, 'lift_effort': 0.0, 'arm_effort': 0.0, 'roll_effort': 0.0, 'pitch_effort': 0.0, 'yaw_effort': 0.0, 'gripper_effort': 0.0}
@@ -127,10 +112,6 @@ class LiveModel():
             if type(robot_state[key]) != float or not np.isfinite(robot_state[key]) or np.isnan(robot_state[key]) or np.abs(robot_state[key]) > 100:
                 print('weird val: ', key, robot_state[key])
                 robot_state[key] =  0.0
-
-        # print(robot_state)
-            
-        # return img_frame, ft_frame, robot_state['gripper'], robot_state['lift_effort'], robot_state['pitch_effort'], robot_state['z']
 
         return img_frame, ft_frame, robot_state
 
@@ -177,7 +158,7 @@ class LiveModel():
                 # print('commanded pos: ', self.pos_dict['gripper'] + 5)
 
     def sleep_and_record(self, duration):
-        # freezes frame instead of cutting video for easier syncing in demos
+        # continues recording video frames while robot is waiting for a command to finish
         robot_ok, pos_dict = read_robot_status(self.client)
         start = time.time()
         while time.time() - start < duration:
@@ -215,10 +196,11 @@ class LiveModel():
             robot_ok, pos_dict = read_robot_status(self.client)
             # ft frame to robot frame
             frame_rotation = np.array([[0, 0, -1], [1, 0, 0], [0, -1, 0]])
+
             theta = pos_dict['pitch'] # gripper pitch angle
             psi = pos_dict['roll'] # gripper roll angle
+
             gripper_pitch_rotation = np.array([[1, 0, 0], [0, np.cos(theta), -np.sin(theta)], [0, np.sin(theta), np.cos(theta)]])
-            # rotating around z axis by psi
             gripper_roll_rotation = np.array([[np.cos(psi), -np.sin(psi), 0], [np.sin(psi), np.cos(psi), 0], [0, 0, 1]])
             total_rotation =  frame_rotation @ gripper_pitch_rotation @ gripper_roll_rotation
 
@@ -264,9 +246,9 @@ class LiveModel():
             # force_pred_robot_frame = output_robot_frame[0:3]
             # torque_pred_robot_frame = output_robot_frame[3:6]
 
-            # if np.linalg.norm(force_gt) > 25:
-            #     print('force too high, don\'t hurt robot')
-            #     break
+            if np.linalg.norm(force_gt) > 25:
+                print('force too high, don\'t hurt robot')
+                break
 
             error = output - ft_data
             self.pred_hist = np.concatenate(([output], self.pred_hist), axis=0)
@@ -335,6 +317,7 @@ class LiveModel():
                 # self.frame_count += 1
             
             # robot_state = dict()
+
             # input to model is current gripper position if live, frame from folder if not live, and 0 if held out or robot not ok
             if 'gripper' in self.config.ROBOT_STATES and self.args.live and not self.args.xbox:
                 robot_ok, self.pos_dict = read_robot_status(self.client)
@@ -351,8 +334,6 @@ class LiveModel():
             #     robot_state = {'gripper': 0.0, 'z': 0.0, 'y': 0.0, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0, 'lift_effort': 0.0, 'arm_effort': 0.0, 'roll_effort': 0.0, 'pitch_effort': 0.0, 'yaw_effort': 0.0, 'gripper_effort': 0.0}
 
             output = predict(self.model, self.frame, robot_state)
-
-            # print('network input: ', robot_state)
             # output = predict_mlp(self.model, self.frame, robot_state)
 
             force_gt = ft_data[0:3]
@@ -383,7 +364,6 @@ class LiveModel():
                     self.result.write(fig)
 
                 if self.args.record_saliency:
-                    # saliency_map = gen_saliency_map(img_path=self.img_list[self.frame_count][1], gt=ft_data)
                     saliency_map = gen_saliency_map(img=self.frame, gt=ft_data)
                     cv2.imshow('saliency', saliency_map)
                     self.result.write(saliency_map)
@@ -430,7 +410,6 @@ class LiveModel():
         if self.args.record_video:
             self.result.release()
         
-
 if __name__ == '__main__':
     live_model = LiveModel()
     live_model.run_model()

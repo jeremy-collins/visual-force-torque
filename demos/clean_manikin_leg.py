@@ -1,18 +1,11 @@
-import cv2
 import numpy as np
-from pathlib import Path
-from collections import OrderedDict
-import robot.zmq_server as zmq_server
 import robot.zmq_client as zmq_client
 from robot.robot_utils import *
 from prediction.live_model import LiveModel
 from prediction.config_utils import *
 from prediction.pred_utils import *
-from prediction.data_utils import process_ft_history
 from prediction.transforms import *
-from prediction.plotter import Plotter
 import time
-import json
 
 roll = 0
 pitch = -30
@@ -32,7 +25,6 @@ class CleanManikin(LiveModel):
         self.mag_delta_tan = 0.005 # movement along surface when cleaning
         self.mag_delta_norm = 0.002 # movement to regulate force normal to surface
         self.delta_x = 0.02
-        # self.delta_y = 0.001
         self.delta_z = 0.005
         self.x_dir = np.array([1, 0, 0])
         self.y_dir = np.array([0, 1, 0])
@@ -41,20 +33,9 @@ class CleanManikin(LiveModel):
         self.state = 'start'
         self.arm_dir = 'in'
         self.base_dir = 'forward'
-        # self.base_dir = 'back'
         self.recover_delta = 0.05
         self.recover_count = 0
         self.last_large_force = np.array([0, 0, 0]) # last recorded force before going below min force
-
-    #     self.zero_force()
-
-    # def zero_force(self):
-    #     # finding initial force
-    #     robot_ok, pos_dict = read_robot_status(self.client)
-    #     self.thresh_count = 0
-    #     robot_state = get_robot_state(self.config, pos_dict)
-
-    #     self.initial_force = predict(self.model, self.frame, robot_state)
 
     def find_tangent_deltas(self, force, dir_des):
         # projecting desired direction onto tangent plane specified by force normal
@@ -68,7 +49,6 @@ class CleanManikin(LiveModel):
         return tan_deltas
         
     def regulate_force(self, force):
-        # robot_ok, pos_dict = read_robot_status(self.client)
         mag_force = np.linalg.norm(force)
         mag_force_yz = np.linalg.norm(force[1:3])
 
@@ -87,15 +67,11 @@ class CleanManikin(LiveModel):
         if mag_force_yz > self.force_thresh:
             # move away from force if it's too big
             print('moving away from force')
-            # self.server.send_payload({'y': pos_dict['y'] + norm_deltas[1] * 2, 'z': pos_dict['z'] + norm_deltas[2] * 2})
-            # self.sleep_and_record(0.5)
 
         elif mag_force_yz < self.force_thresh:
             # move toward force if it's too small
             norm_deltas = -norm_deltas
             print('moving toward force')
-            # self.server.send_payload({'y': pos_dict['y'] + norm_deltas[1], 'z': pos_dict['z'] + norm_deltas[2]})
-            # self.sleep_and_record(0.5)
         print('norm_delta', norm_deltas)
         return norm_deltas
                 
@@ -134,7 +110,6 @@ class CleanManikin(LiveModel):
             elif force_mag > self.force_thresh:
                 self.server.send_payload({'z':pos_dict['z'] + self.delta_z, 'pitch': HOME_POS_DICT['pitch']})
                 self.state = 'clean'
-            # self.sleep_and_record(1)
 
         # cleaning the surface
         elif self.state == 'clean':
@@ -168,8 +143,6 @@ class CleanManikin(LiveModel):
                 else:
                     tan_deltas = self.find_tangent_deltas(force, -self.y_dir)
                     self.server.send_payload({'y':pos_dict['y'] + tan_deltas[1] + norm_deltas[1], 'z':pos_dict['z'] + tan_deltas[2] + norm_deltas[2], 'pitch': HOME_POS_DICT['pitch']})
-            # self.sleep_and_record(0.25)
-            # time.sleep(0.5)
 
         elif self.state == 'move_base':
             if self.base_dir == 'back':
@@ -183,9 +156,8 @@ class CleanManikin(LiveModel):
             self.recover_count += 1
             self.server.send_payload({'z':HOME_POS_DICT['z']})
             self.sleep_and_record(1)
-            # time.sleep(1)
-                
             self.server.send_payload(HOME_POS_DICT)
+            
             if self.arm_dir == 'out':
                 self.arm_dir = 'in'
 

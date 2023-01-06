@@ -1,5 +1,4 @@
 import torch
-import torchvision
 import torch.utils.data as data
 import numpy as np
 import os
@@ -41,15 +40,6 @@ class FTData(data.Dataset):
 
         if 'mask' in self.config.TRANSFORM and self.stage == 'train':
             img = self.t.mask_img_center(img)
-        # if 'flip' in self.config.TRANSFORM and self.stage == 'train':
-        #     flipped = np.random.randint(2)
-        #     if flipped:
-        #         img = cv2.flip(img, 1)
-        
-        #         # mirroring ft data horizontally
-        #         ft[1] = -ft[1] # Fy = horizontal force
-        #         ft[3] = -ft[3] # Tx = yaw torque
-        #         ft[5] = -ft[5] # Tz = roll torque
 
         img = torch.from_numpy(img)
         img = img.permute(2, 0, 1)
@@ -64,28 +54,12 @@ class FTData(data.Dataset):
         if 'flip' in self.config.TRANSFORM and self.stage == 'train':
             flipped = np.random.randint(2)
             if flipped:
-                # img = cv2.flip(img, 1)
                 img = torch.flip(img, [2])
         
                 # mirroring ft data horizontally
                 ft[1] = -ft[1] # Fy = horizontal force
                 ft[3] = -ft[3] # Tx = yaw torque
                 ft[5] = -ft[5] # Tz = roll torque
-
-        # {
-        # "lift_effort": -4.090700912475584,
-        # "arm_effort": 7.519928078952698e-45,
-        # "roll_effort": 0.0,
-        # "pitch_effort": -1.66015625,
-        # "yaw_effort": 0.0,
-        # "gripper_effort": 0.0,
-        # "z": 1.0622238070406196,
-        # "y": 0.23399477780353775,
-        # "roll": 0.0015339807878856412,
-        # "pitch": -0.029145634969827184,
-        # "yaw": -0.0,
-        # "gripper": 0.0995767986059235
-        # }
 
         with open(state_name, 'r') as f:
             robot_state = json.load(f)
@@ -95,8 +69,6 @@ class FTData(data.Dataset):
                 if type(robot_state[key]) != float or not np.isfinite(robot_state[key]) or np.isnan(robot_state[key]) or np.abs(robot_state[key]) > 100:
                     print('weird val: ', key, robot_state[key])
                     robot_state[key] =  0.0
-
-        # print(robot_state)
 
         if 'gripper' in self.config.ROBOT_STATES:
             gripper_pos = normalize_gripper_vals(robot_state['gripper'])
@@ -127,8 +99,6 @@ class FTData(data.Dataset):
         if self.config.GRIP_POS_IN_IMG:
             # setting the first 10 rows of the image to the gripper position
             img[:, :10, :] = normalize_gripper_vals(robot_state['gripper'])
-
-        # states *= 0
 
         return img, ft, states
 
@@ -164,13 +134,11 @@ class FTData(data.Dataset):
         print(len(img_names), len(ft_names), len(state_names))
 
         # add img, ft, and None if img and ft sizes are equal and the robot states are disabled
-        # if len(img_names) == len(ft_names) and (len(self.config.ROBOT_STATES) == 0 and not self.config.GRIP_POS_IN_IMG):
         if len(img_names) == len(ft_names) and (len(img_names) != len(state_names)):
             for i in range(len(img_names)):
                 self.dataset.append((img_names[i][1], ft_names[i][1], None))
 
         # add img, ft, and state data if all three sizes are equal and the robot states are enabled
-        # elif len(img_names) == len(ft_names) and len(img_names) == len(state_names) and (len(self.config.ROBOT_STATES) > 0 or self.config.GRIP_POS_IN_IMG):
         elif len(img_names) == len(ft_names) and len(img_names) == len(state_names):
             for i in range(len(img_names)):
                 self.dataset.append((img_names[i][1], ft_names[i][1], state_names[i][1]))

@@ -1,3 +1,5 @@
+# Model which takes in an image and the robot state and estimates forces and torques
+# robot state input can be set in prediction/pred_utils.py (predict() function)
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18, resnet50, efficientnet_b0, squeezenet1_1
@@ -28,9 +30,9 @@ class Model(nn.Module):
             # len(module.children()) = 2
             model = squeezenet1_1(pretrained=True)
             self.num_visual_features = 1352
-            # change the last conv2d layer
+            # changing the last conv2d layer
             model.classifier._modules["1"] = nn.Conv2d(512, 6, kernel_size=(1, 1))
-            # change the internal num_classes variable rather than redefining the forward pass
+            # changing the internal num_classes variable rather than redefining the forward pass
             model.num_classes = 6
 
         # print('model: ', model)
@@ -45,14 +47,6 @@ class Model(nn.Module):
                 list(model.children())[-2]
                 )
 
-            # # splitting up the conv layers, high res [GRAD-CAM]
-            # self.conv_layers_1 = nn.Sequential(
-            #     *list(model.children())[:-3]
-            #     )
-                
-            # self.conv_layers_2 = nn.Sequential(
-            #     *list(model.children())[-3:-1]
-            #     )
         else:
             # cutting off the last layer
             self.conv_layers = nn.Sequential(
@@ -76,8 +70,6 @@ class Model(nn.Module):
         
         self.fc_layers = nn.Sequential(
             nn.Dropout(config.DROPOUT),
-            # nn.Dropout(config.DROPOUT),
-            # nn.ReLU(),
 
             # # adding layer for nonlinearities in robot state
             # nn.Linear(self.num_visual_features + self.num_extra_features, 512),
@@ -104,19 +96,16 @@ class Model(nn.Module):
 
             x = self.conv_layers_2(x)
 
-        # else:
-            # x = self.conv_layers(img)
-            # x = torch.tensor([])
+        else:
+            x = self.conv_layers(img)
 
         if self.num_extra_features > 0:
-            states = torch.reshape(states, (states.shape[0], states.shape[1], 1, 1)).float()
-            # x = torch.cat((x, states), dim=1)
-            # print('state shape: ', states.shape)
+            # states = torch.reshape(states, (states.shape[0], states.shape[1], 1, 1)).float()
+            x = torch.cat((x, states), dim=1)
             x = states
-            # print('x = ', x[0])
         
-        # model_output = self.fc_layers(x.reshape(-1, self.num_visual_features + self.num_extra_features))
-        model_output = self.fc_layers(x.reshape(-1, self.num_extra_features))
+        model_output = self.fc_layers(x.reshape(-1, self.num_visual_features + self.num_extra_features))
+        # model_output = self.fc_layers(x.reshape(-1, self.num_extra_features))
 
         return model_output
 

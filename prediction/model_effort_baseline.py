@@ -1,3 +1,6 @@
+# Model which takes robot state and estimates forces and torques
+# robot state input can be set in prediction/pred_utils.py (predict_mlp() function)
+
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18, resnet50, efficientnet_b0, squeezenet1_1
@@ -44,13 +47,8 @@ class Model(nn.Module):
 
     def forward(self, img, states):
         if self.num_extra_features > 0:
-            states = torch.reshape(states, (states.shape[0], states.shape[1], 1, 1)).float()
-            # x = torch.cat((x, states), dim=1)
-            # print('state shape: ', states.shape)
-            x = states
-            # print('x = ', x[0])
+            x = torch.reshape(states, (states.shape[0], states.shape[1], 1, 1)).float()
         
-        # model_output = self.fc_layers(x.reshape(-1, self.num_visual_features + self.num_extra_features))
         model_output = self.fc_layers(x.reshape(-1, self.num_extra_features))
 
         return model_output

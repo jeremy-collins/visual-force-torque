@@ -1,4 +1,3 @@
-import torch
 import argparse
 import os
 import yaml
@@ -11,7 +10,6 @@ def load_config(config_name):
     with open(config_path, 'r') as stream:
         data = yaml.safe_load(stream)
 
-    # data_obj = namedtuple('MyTuple', data)
     data_obj = SimpleNamespace(**data)
     data_obj.CONFIG_NAME = config_name
     return data_obj

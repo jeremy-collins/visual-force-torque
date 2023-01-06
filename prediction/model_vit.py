@@ -67,14 +67,6 @@ class Model(nn.Module):
         # print('vit conv layers: ', *list(self.model.children())[:-1])
 
         if self.config.MODEL_NAME == 'vit':
-            # self.fc_layers = nn.Sequential(
-            #     nn.LayerNorm((1024,), eps=1e-05, elementwise_affine=True),
-            #     nn.Dropout(self.config.DROPOUT),
-            #     nn.Linear(1024, 6),
-            # )
-
-            # self.fc_layers = list(model.children())[-1]
-
             self.fc_layers = nn.Sequential(
                 list(self.model.children())[-1],
                 nn.AdaptiveAvgPool2d(1),

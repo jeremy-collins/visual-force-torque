@@ -13,10 +13,8 @@ def get_roll_pitch():
         data = np.array(data)
         
         return data
-    
 
 if __name__ == '__main__':
     while True:
         data = get_roll_pitch()
         print(data)
-     

@@ -1,18 +1,11 @@
-import cv2
 import numpy as np
-from pathlib import Path
-from collections import OrderedDict
-import robot.zmq_server as zmq_server
 import robot.zmq_client as zmq_client
 from robot.robot_utils import *
 from prediction.live_model import LiveModel
 from prediction.config_utils import *
 from prediction.pred_utils import *
-from prediction.data_utils import process_ft_history
 from prediction.transforms import *
-from prediction.plotter import Plotter
 import time
-import json
 
 roll = 0
 pitch = -45
@@ -119,7 +112,6 @@ class CleanHuman(LiveModel):
             self.server.send_payload(HOME_POS_DICT)
             self.sleep_and_record(5)
             self.state = 'find_blanket_top'
-            # self.state = 'find_surface'
 
         # regulating vertical gripper position with a setpoint of self.blanket_force_thresh
         elif self.state == 'find_blanket_top':
@@ -170,7 +162,6 @@ class CleanHuman(LiveModel):
                 self.server.send_payload({'z':pos_dict['z'] - self.delta_z, 'pitch': HOME_POS_DICT['pitch']})
             else:
                 # move up a little, then grab and lift the cloth
-                # self.server.send_payload({'z':pos_dict['z'] + self.delta_z_blanket, 'pitch': HOME_POS_DICT['pitch']})
                 self.server.send_payload({'pitch': HOME_POS_DICT['pitch']})
                 self.sleep_and_record(2)
                 self.server.send_payload({'gripper':self.gripper_hold_pos})
@@ -306,7 +297,6 @@ class CleanHuman(LiveModel):
                 self.state = 'find_bed_foot_again'
             elif self.recover_count % 2 == 0:
                 self.state = 'move_base'
-                # self.recover_count = 0
             else:
                 self.state = 'find_surface'
             

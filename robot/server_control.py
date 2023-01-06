@@ -1,19 +1,8 @@
 import cv2
-import numpy as np
-import pickle
-from datetime import datetime
-import argparse
-import os
-from pathlib import Path
-import threading
-import time
-from collections import OrderedDict
-import math
 import robot.zmq_server as zmq_server
 import robot.zmq_client as zmq_client
 from robot.robot_utils import *
 from recording.gripper_camera import Camera
-import keyboard
 
 HOME_POS_DICT = {'y': 0.1, 'z': 0.75, 'roll': 0, 'pitch': -0.3, 'yaw': 0, 'gripper': 55}
 
@@ -30,13 +19,9 @@ def main():
 
     while True:
         robot_ok, pos_dict = read_robot_status(client)
-        # print(pos_dict)
-        # print(pos_dict['gripper'])
         frame = feed.get_frame()
 
         cv2.imshow("frames", frame)
-        # cv2.waitKey(1)
-        # time.sleep(0.001)
 
         keycode = cv2.waitKey(1) & 0xFF
 

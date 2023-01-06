@@ -23,18 +23,11 @@ def predict(model, frame, robot_state):
 
     robot_state_input = torch.tensor([robot_state['gripper']])
 
-    # double check model input
-    # img = frame.squeeze(0)
-    # img = img.permute(1, 2, 0)
-    # cv2.imshow('img', np.array(img))
-
     output = model(frame, robot_state_input)
-    # output = torch.zeros((1, 6))
     output = output.detach().numpy().squeeze()
 
     # fix output for incorrectly scaled models
     output = output / config.SCALE_FT
-
     output = np.round(output, 6)
 
     return output
@@ -71,22 +64,12 @@ def predict_mlp(model, frame, robot_state):
                                     # [robot_state['yaw']]
                                     ])
 
-    # double check model input
-    # img = frame.squeeze(0)
-    # img = img.permute(1, 2, 0)
-    # cv2.imshow('img', np.array(img))
-
     frame = np.zeros_like(frame)
-
-    # robot_state_input *= 0
-
     output = model(frame, robot_state_input)
-    # output = torch.zeros((1, 6))
     output = output.detach().numpy().squeeze()
 
     # fix output for incorrectly scaled models
     output = output / config.SCALE_FT
-
     output = np.round(output, 6)
 
     return output
@@ -99,6 +82,7 @@ def normalize_gripper_vals(gripper_val):
     elif gripper_val > 1:
         gripper_val = 1
     elif gripper_val is None or np.isnan(gripper_val):
+        # set to 0 if value is invalid
         gripper_val = 0
     return gripper_val
 
@@ -170,11 +154,8 @@ def transform_img_numpy(img, config, stage='test'):
     img = img.float()/255.0
     img = img.unsqueeze(0)
     img = transform(img)
-
     img = img.squeeze(0)
     img = img.permute(1, 2, 0)
     img = img.numpy()
-    # img = img * 255.0
-    # img = img.astype(np.uint8)
 
     return img

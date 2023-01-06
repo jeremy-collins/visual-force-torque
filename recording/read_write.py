@@ -1,6 +1,5 @@
 #!/usr/bin/env/python3
 
-import os
 import sys, tty, termios
 from dynamixel_sdk import * 
 
@@ -77,12 +76,6 @@ def move_gripper(dxl_goal_position):
                 break
 
     print("gripper reached goal position of ", dxl_goal_position)
-    # # Disable Dynamixel Torque
-    # dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL_ID, ADDR_TORQUE_ENABLE, TORQUE_DISABLE)
-    # if dxl_comm_result != COMM_SUCCESS:
-    #     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-    # elif dxl_error != 0:
-    #     print("%s" % packetHandler.getRxPacketError(dxl_error))
 
     # Close port
     portHandler.closePort()

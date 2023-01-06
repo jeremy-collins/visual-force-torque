@@ -1,18 +1,10 @@
-import cv2
 import numpy as np
-from pathlib import Path
-from collections import OrderedDict
-import robot.zmq_server as zmq_server
 import robot.zmq_client as zmq_client
 from robot.robot_utils import *
 from prediction.live_model import LiveModel
 from prediction.config_utils import *
 from prediction.pred_utils import *
-from prediction.data_utils import process_ft_history
 from prediction.transforms import *
-from prediction.plotter import Plotter
-import time
-import json
 
 HOME_POS_DICT = {'y': 0.1, 'z': 0.75, 'roll': 0, 'pitch': 0, 'yaw': 0, 'gripper': 100}
 
@@ -39,11 +31,10 @@ class ObjectHandover(LiveModel):
         robot_ok, pos_dict = read_robot_status(self.client)
         self.thresh_count = 0
         self.frame = self.feed.get_frame()
+
         # input to model is current gripper position if live, frame from folder if not live, and 0 if held out
         robot_state = get_robot_state(self.config, pos_dict)
-
         output = predict(self.model, self.frame, robot_state)
-
         self.prev_force = output[0:3]
 
     def control_robot(self, pred_dict):
@@ -60,8 +51,6 @@ class ObjectHandover(LiveModel):
             if self.thresh_count > self.thresh_count_lim:
                 self.state = 'let go'
                 self.server.send_payload({'gripper':self.gripper_open_pos})
-            # else:
-            #     self.server.send_payload({'gripper':self.gripper_hold_pos})
         else:
             self.server.send_payload({'gripper':self.gripper_open_pos})
 

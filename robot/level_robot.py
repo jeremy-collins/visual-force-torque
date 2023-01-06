@@ -31,7 +31,4 @@ def level(input_dict):
 
 if __name__ == '__main__':
     gripper_dict = {'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0, 'gripper':0}
-    # joint_dict =  {'y': 0.1, 'z': 1.5}
     level(gripper_dict)
-    # time.sleep(0.1)
-    # level(joint_dict)

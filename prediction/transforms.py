@@ -1,6 +1,3 @@
-from typing import Sequence, Tuple
-
-import numpy as np
 import torchvision.transforms as transforms
 from prediction.config_utils import *
 import cv2
@@ -19,14 +16,11 @@ class RPFTTransforms:
 
     def bottom_center_crop(self, img):
         # resizes the image and takes a bottom center crop such that the image contains the entire gripper
-        # return transforms.functional.crop(img, top=img.size()[1] - 224, left=img.size()[2] // 2 - 224 // 2, height=224, width=224)
-        # return transforms.functional.crop(img, top=img.size()[1] - 224, left=img.size()[2] // 2 - 249 // 2, height=self.img_size[0], width=self.img_size[1])
         return transforms.functional.crop(img, top=img.size()[1] - self.img_size[0], left=img.size()[2] // 2 - (self.img_size[1] + 25) // 2, height=self.img_size[0], width=self.img_size[1])
     
     def bottom_center_crop_soft(self, img):
         # resizes the image and takes a bottom center crop such that the image contains the entire gripper
         return transforms.functional.crop(img, top=img.size()[1] - self.img_size[0], left=img.size()[2] // 2 - (self.img_size[1] - 26) // 2, height=self.img_size[0], width=self.img_size[1])
-    
 
     def bottom_center_crop_big(self, img):
         # takes a bottom center crop such that the image contains the entire gripper

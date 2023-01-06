@@ -1,14 +1,3 @@
-import cv2
-import numpy as np
-import pickle
-from datetime import datetime
-import argparse
-import os
-from pathlib import Path
-import threading
-import time
-from collections import OrderedDict
-import math
 import robot.zmq_server as zmq_server
 import robot.zmq_client as zmq_client
 
@@ -17,11 +6,6 @@ def read_robot_status(client):
     if robot_status is None:
     #     print('Robot not ok, dont have recent status packet')
         return False, None
-
-    # print(json.dumps(robot_status, indent=4))
-    # print('gripper pos:     ', robot_status['end_of_arm']['stretch_gripper']['pos'])
-    # print('gripper pos_pct: ', robot_status['end_of_arm']['stretch_gripper']['pos_pct'])
-
 
     pos_dict = dict()
     pos_dict['lift_effort'] = robot_status['lift']['force']
@@ -37,10 +21,6 @@ def read_robot_status(client):
 
     pos_dict['x'] = robot_status['base']['x']
     pos_dict['theta'] = robot_status['base']['theta']
-
-    # if abs(robot_status['base']['y']) > 0.01:
-    #     print('Robot base has a rotation on it, x position invalid')
-    #     return False, None
 
     pos_dict['z'] = robot_status['lift']['pos']
     pos_dict['y'] = robot_status['arm']['pos']

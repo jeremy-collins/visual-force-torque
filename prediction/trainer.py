@@ -1,7 +1,9 @@
 import torch
 from torch.utils.data import DataLoader
-import argparse
 from prediction.model import Model
+# from prediction.model_effort_baseline import Model
+# from prediction.model_robot_state import Model
+# from prediction.model_vit import Model
 from recording.loader import FTData
 import os
 from tqdm import tqdm
@@ -22,7 +24,6 @@ def train_epoch(model, optimizer, train_loader, loss_ratio):
         robot_states = robot_states.to(device)
         model = model.to(device)
         optimizer.zero_grad()
-        # outputs = model(img)
         outputs = model(img, robot_states)
 
         f_outputs = outputs[:, 0:3]
@@ -45,7 +46,6 @@ def train_epoch(model, optimizer, train_loader, loss_ratio):
     avg_f_mse = running_f_mse / len(train_loader)
     avg_t_mse = running_t_mse / len(train_loader)
 
-    # return f_mse, t_mse
     return avg_f_mse, avg_t_mse
 
 def val_epoch(model, test_loader):
@@ -77,7 +77,6 @@ def val_epoch(model, test_loader):
     avg_f_mse = running_f_mse / len(test_loader)
     avg_t_mse = running_t_mse / len(test_loader)
 
-    # return f_mse, t_mse
     return avg_f_mse, avg_t_mse
 
 if __name__ == "__main__":
@@ -142,13 +141,13 @@ if __name__ == "__main__":
         torch.save(model.state_dict(), model_path)
         print('Model saved to {}'.format(model_path))
 
-        # saving losses to a file
+        # saving losses to a txt file
         with open(os.path.join('logs', args.config + '_' + str(folder_index), '{}_log_{}.txt'.format(args.config, 'raw')), 'a') as f:
             log = model_name + ': Epoch {}/{}: Training loss = {}, Validation loss = {}\n'.format(epoch+1, config.NUM_EPOCHS, train_loss, val_loss)
             loss_history.append((val_loss, model_name))
             f.write(log)
 
-    # saving losses to log files
+    # saving losses to a txt file
     loss_history.sort(key=lambda x: x[0])
     with open(os.path.join('logs', args.config + '_' + str(folder_index), '{}_log_{}.txt'.format(args.config, 'sorted')), 'a') as f:
         f.write('\n\nBest model: {}\n'.format(loss_history[0][1]))

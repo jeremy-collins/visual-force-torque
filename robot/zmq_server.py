@@ -3,7 +3,6 @@ import time
 import json
 import numpy as np
 
-
 class SocketServer:
     def __init__(self, port=5556):
         self.context = zmq.Context()

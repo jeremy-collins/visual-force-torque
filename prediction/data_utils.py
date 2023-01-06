@@ -1,13 +1,10 @@
 import numpy as np
-import cv2
 import os
 from recording.loader import FTData
 from tqdm import tqdm
 import os
-from typing import Tuple
 from PIL import Image
 from tqdm import tqdm
-import argparse
 import json
 from prediction.config_utils import *
 
@@ -28,10 +25,9 @@ def compute_loss_ratio(stage, folder):
     for i in tqdm(range(len(dataset))):
         img_path, ft_path, state = dataset[i]
         ft = np.load(ft_path)
-        # ft = ft_path
-
         ft = np.array(ft, dtype='float32')
         ft = np.abs(ft)
+
         forces = ft[0:3]
         torques = ft[3:6]
 
@@ -62,7 +58,6 @@ def compute_loss_ratio(stage, folder):
     print("force stdev: ", force_std)
     print("torque stdev: ", torque_std)
     
-    # loss_ratio = force_mean.item() / torque_mean.item()
     loss_ratio = force_std.item() / torque_std.item()
 
     return loss_ratio
@@ -109,7 +104,6 @@ def view_gripper_values(dir_name):
     grip_data = []
     grip_vals = np.array([])
     for dirpath, dirnames, grip_list in os.walk(dir_name):
-        # print('processing ', dirpath, '...')
         for grip in grip_list:
             if not dirnames and grip.endswith(".txt"):
                 grip_data.append((float(grip[:-4]), os.path.join(dirpath, grip)))
@@ -130,7 +124,6 @@ def view_gripper_values(dir_name):
     print('min: ', np.min(grip_vals))
 
 def process_ft_history(file_list):
-    # data_folder = './logs/ft_history/' 
     print('files: ', file_list)
 
     if type(file_list) == str:
@@ -153,17 +146,14 @@ def process_ft_history(file_list):
 
     gt_initial_mag = np.linalg.norm(gt_hist[:,0:3], axis=1)
 
-    # # filtering out the values where the force is small
+    # filtering out the values where the force is small
     # pred_hist = pred_hist[gt_initial_mag > 1, :]
     # gt_hist = gt_hist[gt_initial_mag > 1, :]
 
     print('pred_hist: ', pred_hist.shape)
     print('gt_hist: ', gt_hist.shape)
-    # timestamp_hist = np.array(history['timestamp_hist'])
 
     err_hist = pred_hist - gt_hist
-    
-
     err_mean = np.mean(np.abs(err_hist), axis=0)
     err_median = np.median(err_hist, axis=0)
     err_std = np.std(err_hist, axis=0)
@@ -227,8 +217,6 @@ def process_ft_history(file_list):
 
     wcs_f_2 = np.sum(gt_hist[:,0:3] * pred_hist[:,0:3]) / (np.linalg.norm(f_mag_hist) * np.linalg.norm(f_pred_mag_hist))
     wcs_t_2 = np.sum(gt_hist[:,3:6] * pred_hist[:,3:6]) / (np.linalg.norm(t_mag_hist) * np.linalg.norm(t_pred_mag_hist))
-
-    # wcs = f_dp_hist * f_mag_hist * f_pred_mag_hist
 
     f_mse = np.mean(np.mean(np.square(err_hist[:,0:3]), axis=1), axis=0)
     t_mse = np.mean(np.mean(np.square(err_hist[:,3:6]), axis=1), axis=0)

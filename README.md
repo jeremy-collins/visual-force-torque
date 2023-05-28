@@ -2,14 +2,11 @@
 
 [Paper](https://arxiv.org/abs/2210.00051) | [Video](https://www.youtube.com/watch?v=x0V3p6EUj1s) | [Dataset/Models](https://1drv.ms/f/s!AjebifpxoPl5hOBB-a_D69ip7IxMXQ?e=Co2k2a)
 
-Can we replace a $6000 force/torque sensor with a $60 USB camera?
+**Can we replace a $6000 force/torque sensor with a $60 USB camera?**
 
 Visual Force/Torque Sensing (VFTS) estimates forces and torques on a robotic gripper from a single RGB image.
 
-[Visual Force/Torque Sensing](assets/Headliner.png)
-
-<iframe width="1280" height="720" src="https://www.youtube.com/embed/x0V3p6EUj1s" title="ICRA 2023 - Visual Force/Torque Sensing" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-
+![alt text](https://github.com/jeremy-collins/visual-force-torque/blob/main/assets/Headliner.png "Visual Force/Torque Sensing")
 
 ## Setup
 
